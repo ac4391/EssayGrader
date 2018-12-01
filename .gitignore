@@ -105,3 +105,6 @@ venv.bak/
 
 # MacOS Directory Attirbutes
 .DS_Store
+
+# Pretrained GloVe word embeddings
+glove.6B/
