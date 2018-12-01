@@ -94,14 +94,14 @@ def essay_to_wordembed(embed_dict, words, embed_size):
 
     # Initialize embedding matrix
     num_words = len(words)
-    embed_mat = np.zeros(shape=[embed_size, num_words], dtype='float32')
+    embed_mat = np.zeros(shape=[num_words, embed_size], dtype='float32')
     for idx, word in enumerate(words):
         if word not in embed_dict:
             #print("{} not found in dictionary".format(word))
             # Unknown words have their own word embedding
-            embed_mat[:,idx] = embed_dict['unk']
+            embed_mat[idx,:] = embed_dict['unk']
         else:
-            embed_mat[:,idx] = embed_dict[word]
+            embed_mat[idx,:] = embed_dict[word]
 
     return embed_mat
 
@@ -136,5 +136,14 @@ def load_word_embedding(embed_size):
 
     return embed_dict
 
+def normalize_scores(scores, max_score):
+    '''
+    This function will...
+    :param scores: 
+    :return: 
+    '''
 
+    norm_scores = scores.apply(lambda x: x*12/max_score)
+
+    return norm_scores
 
