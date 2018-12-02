@@ -155,13 +155,3 @@ def pad_embedding(essays_embed, max_length, right_pad=True):
                 essays_pad[idx] = np.vstack((pad_mat, mat))
 
     return essays_pad
-
-def normalize_scores(df, sets, max_score):
-    # Incomplete PLEASE HELP ME FUCK PANDAS
-    for set in sets:
-        scores = (df[df['essay_set']==set]['domain1_score'])
-        max_set_score = max(scores)
-        norm_scores = scores.apply(lambda x: x*max_score/max_set_score)
-        df[df['essay_set']==set]['norm_score'] = norm_scores
-    return df
-
