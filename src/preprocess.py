@@ -63,21 +63,15 @@ def essay_to_words(text, lowercase=True):
 
     return words
 
-def unique_words(words):
-    # *** Currently not used ***
-
-    # Count word occurrences in the essay
-    word_dict={}
-    for word in words:
-        if word in word_dict:
-            word_dict[word] += 1
-        else:
-            word_dict[word] = 1
-
-    # The list of unique words is a list of the keys in the word dictionary
-    unique_words = [key for key in word_dict.keys()]
-    
-    return unique_words
+def word_count(row):
+    '''
+    This function will take an input row of a pandas dataframe representing a
+    single essay and return the word count from that essay by analyzing the 
+    shape of the word embedding matrix
+    :param row: pandas dataframe row representing an essay
+    :return: Essay Shape
+    '''
+    return row['essays_embed'].shape[0]
 
 def essay_to_wordembed(embed_dict, words, embed_size):
     '''
@@ -136,14 +130,38 @@ def load_word_embedding(embed_size):
 
     return embed_dict
 
-def normalize_scores(scores, max_score):
+def pad_embedding(essays_embed, max_length, right_pad=True):
     '''
-    This function will...
-    :param scores: 
-    :return: 
+    This function will take essays of variable length and standardize
+    their length
+    :param essays_embed: Array of word embedded essays
+    :param max_length: The desired word length for each essay
+    :param right_pad: Allows for padding at the start or end of the essay
+    :return: Array of padded word embedded essays
     '''
+    num_essays = len(essays_embed)
+    essays_pad = [None]*num_essays
 
-    norm_scores = scores.apply(lambda x: x*12/max_score)
+    for idx, mat in enumerate(essays_embed):
+        num_words, embed_size = mat.shape
+        pad_length = max_length-num_words
+        if pad_length>0:
+            pad_mat = np.zeros(shape=[pad_length, embed_size], dtype='float32')
 
-    return norm_scores
+            # Add padding to the beginning or the end of the essay
+            if right_pad==True:
+                essays_pad[idx] = np.vstack((mat, pad_mat))
+            else:
+                essays_pad[idx] = np.vstack((pad_mat, mat))
+
+    return essays_pad
+
+def normalize_scores(df, sets, max_score):
+    # Incomplete PLEASE HELP ME FUCK PANDAS
+    for set in sets:
+        scores = (df[df['essay_set']==set]['domain1_score'])
+        max_set_score = max(scores)
+        norm_scores = scores.apply(lambda x: x*max_score/max_set_score)
+        df[df['essay_set']==set]['norm_score'] = norm_scores
+    return df
 
