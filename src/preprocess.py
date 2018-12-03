@@ -52,12 +52,15 @@ def essay_to_words(text, lowercase=True):
     :param lowercase: True or False depending on if lowercase is desired
     :return: Essay as a list of words.
     '''
-
+    stop_words=['I','i','a','about','an','are','as','at','be','by','com','for','from','how','in','is','it','of','on','or','that','the','this','to','was','what','when','where','who','will','with','www']
     # Use RegEx to separate essay into words. Note that special characters
     # are considered individual words.
     if lowercase == True:
         text_lower = text.lower()
         words = re.findall(r"[\w']+|[.,!?;]", text_lower)
+        for word in words:
+            if word in stop_words:
+                words.remove(word)
     else:
         words = re.findall(r"[\w']+|[.,!?;]", text)
 
