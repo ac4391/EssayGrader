@@ -20,10 +20,12 @@ def get_batches(essays, scores, batch_size, net_type='lstm'):
 
     elif net_type=='mlp':
         while True:
+            essays_shuf, scores_shuf = shuffle(essays,scores)
             for i in range(n_batches):
-                batch_X = essays[i * batch_size: (i + 1) * batch_size, :]
-                batch_y = scores[i * batch_size: (i + 1) * batch_size]
+                batch_X = essays_shuf[i * batch_size: (i + 1) * batch_size, :]
+                batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
                 yield (batch_X, batch_y)
+                #print("Yielded range {} to {}".format(i*batch_size, (i+1)*batch_size))
 
 
 
@@ -41,7 +43,7 @@ def shuffle(essays, scores):
     mask = np.random.shuffle(mask)
 
     # Apply random mask to both essays and corresponding scores
-    essays_shuffled = essays[mask,:,:]
+    essays_shuffled = essays[mask,:]
     scores_shuffled = scores[mask]
 
     return essays_shuffled[0], scores_shuffled[0]
