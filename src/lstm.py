@@ -45,7 +45,7 @@ class RNN():
         
     def inputs_layer(self):
 
-        self.inputs = tf.placeholder(tf.float32, shape=(self.batch_size, self.seq_length, self.embed_size), name='inputs')
+        self.inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.embed_size), name='inputs')
         self.targets = tf.placeholder(tf.int32, shape=(self.batch_size), name='targets')
         
     def rnn_layer(self):
