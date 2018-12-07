@@ -7,7 +7,7 @@ import time
 import os
 
 class LSTM_RNN():
-    def __init__(self, num_classes, batch_size=64, num_steps=500, cell_type='LSTM',
+    def __init__(self, num_classes, batch_size=64, seq_length=600, embed_size=100, cell_type='LSTM',
                  rnn_size=128, num_layers=2, learning_rate=0.001, train_keep_prob=0.5, sampling=False):
         '''
         Initialize the input parameter to define the network
@@ -27,42 +27,45 @@ class LSTM_RNN():
         
         self.num_classes = num_classes
         self.batch_size = batch_size
-        self.num_steps = num_steps
+        self.seq_length = seq_length
+        self.embed_size = embed_size
         self.cell_type = cell_type
         self.rnn_size = rnn_size
         self.num_layers = num_layers
         self.learning_rate = learning_rate
-        self.grad_clip = grad_clip
+        #self.grad_clip = grad_clip
         self.train_keep_prob = train_keep_prob
         
         self.inputs_layer()
         self.rnn_layer()
         self.outputs_layer()
         self.my_loss()
-        self.my_optimizer()
+        self.val_acc()
+        #self.my_optimizer()
         self.saver = tf.train.Saver()
         
     def inputs_layer(self):
 
-        self.inputs = tf.placeholder(tf.int32, shape=(self.batch_size, self.num_steps), name='inputs')
-        self.targets = tf.placeholder(tf.int32, shape=(self.batch_size, 1), name='targets')
+        self.inputs = tf.placeholder(tf.float32, shape=(self.batch_size, self.seq_length, self.embed_size), name='inputs')
+        self.targets = tf.placeholder(tf.int32, shape=(self.batch_size), name='targets')
         
     def rnn_layer(self):
         
-        if (cell_type == 'LSTM'):
+        if (self.cell_type == 'LSTM'):
             cell = LSTMCell(self.rnn_size)
         else:
             cell = GRUCell(self.rnn_size)
             
         cell = tf.nn.rnn_cell.MultiRNNCell([cell], state_is_tuple=True)
-        self.initial_state = cell.zero_state(self.batch_size, dtype = tf.float32)
-        
-        
-        self.rnn_outputs, self.final_state = tf.nn.dynamic_rnn(cell, self.inputs, initial_state = self.initial_state, dtype=tf.float32)
+        # Initial state
+        self.initial_state = cell.zero_state(self.batch_size, dtype=tf.float32)
+
+        self.rnn_outputs, self.final_state = tf.nn.dynamic_rnn(cell, self.inputs,\
+                                                               initial_state=self.initial_state, dtype=tf.float32)
         
     def outputs_layer(self):
 
-        seq_output = self.rnn_outputs #Perhaps we need to transpose this
+        seq_output = self.rnn_outputs[:,-1,:] # We only want the output from the last iteration
         x = tf.reshape(seq_output, [-1, self.rnn_size])
         
         # define softmax layer variables:
@@ -77,11 +80,91 @@ class LSTM_RNN():
         self.prob_pred = tf.nn.softmax(self.logits, name='predictions')
         
     def my_loss(self):
-    
-        y_reshaped = tf.reshape(self.targets, self.logits.get_shape())
+        y_one_hot = tf.one_hot(self.targets, self.num_classes)
+        y_reshaped = tf.reshape(y_one_hot, self.logits.get_shape())
         
         # Softmax cross entropy loss
         loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=y_reshaped)
         self.loss = tf.reduce_mean(loss)     
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
+
+    def val_acc(self):
+        self.preds = tf.argmax(self.logits, axis=1, output_type=tf.int32)
+        correct_prediction = tf.equal(self.targets, self.preds)
+        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+    def train(self, batches, X_val, y_val):
+            self.session = tf.Session()
+            with self.session as sess:
+                sess.run(tf.global_variables_initializer())
+                counter = 0
+                new_state = sess.run(self.initial_state)
+                # Train network
+                print("Initializing training")
+                for X_batch, y_batch in batches:
+                    counter += 1
+                    start = time.time()
+                    feed = {self.inputs: X_batch,
+                            self.targets: y_batch,
+                            #self.keep_prob: self.train_keep_prob,
+                            self.initial_state: new_state}
+                    batch_loss, _, new_state = sess.run([self.loss, self.optimizer,
+                                                         self.final_state],
+                                                         feed_dict=feed)
+                    end = time.time()
+                    if counter % 1 == 0:
+                        print('step: {} '.format(counter),
+                              'loss: {:.4f} '.format(batch_loss),
+                              '{:.4f} sec/batch'.format((end-start)))
+                    if counter % 5 == 0:
+                        feed = {self.inputs: X_val,
+                                self.targets: y_val,
+                                self.initial_state: new_state}
+                        val_acc, preds, targs = sess.run([self.accuracy,self.preds, self.targets], feed_dict = feed)
+                        print('step: {} '.format(counter),
+                              'validation accuracy {} '.format(val_acc))
+                        print(preds)
+                        print(targs)
+
+                    '''
+                    if (counter % save_every_n == 0):
+                        print("Model Saved")
+                        self.saver.save(sess, "checkpoints/i{}_l{}.ckpt".format(counter, self.rnn_size))
+                        
+                    if counter >= max_count:
+                        break
+                    '''
+
+                #self.saver.save(sess, "checkpoints/i{}_l{}.ckpt".format(counter, self.rnn_size))
+
+    # Optimizer below is from HW3 - includes gradient clip
+    '''
+    def my_optimizer(self):
         
+        build our optimizer
+        Unlike previous worries of gradient vanishing problem,
+        for some structures of rnn cells, the calculation of hidden layers' weights 
+        may lead to an "exploding gradient" effect where the value keeps growing.
+        To mitigate this, we use the gradient clipping trick. Whenever the gradients are updated, 
+        they are "clipped" to some reasonable range (like -5 to 5) so they will never get out of this range.
+        parameters we will use:
+        self.loss, self.grad_clip, self.learning_rate
+        we have to define:
+        self.optimizer for later use
+        
+        # using clipping gradients
+        #######################################################
+        # TODO: implement your optimizer with gradient clipping
+        #######################################################
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+
+        # Gradient clipping - optimizer.minimize(loss) both calculates gradients and applies them
+        # Here, we would like to calculate, then manipulate, and then apply
+        
+        # https: // stackoverflow.com / questions / 36498127 / how - to - apply - gradient - clipping - in -tensorflow
+        gvs = optimizer.compute_gradients(self.loss)
+        #https: // github.com / jazzsaxmafia / Inpainting / issues / 6
+        capped_gvs = map(lambda gv: gv if gv[0] is None \
+                         else [tf.clip_by_value(gv[0], -self.grad_clip, self.grad_clip), gv[1]], gvs)
+        self.optimizer = optimizer.apply_gradients(capped_gvs) 
+    '''
