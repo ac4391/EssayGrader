@@ -6,7 +6,7 @@ import numpy as np
 import time
 import os
 
-class LSTM_RNN():
+class RNN():
     def __init__(self, num_classes, batch_size=64, seq_length=600, embed_size=100, cell_type='LSTM',
                  rnn_size=128, num_layers=2, learning_rate=0.001, train_keep_prob=0.5, sampling=False):
         '''
@@ -14,7 +14,6 @@ class LSTM_RNN():
         inputs:
         :param num_classes: (int) the vocabulary size of your input data
         :param batch_size: (int) number of sequences in one batch
-        :param num_steps: (int) length of each sequence in one batch
         :param cell_type: your rnn cell type, 'LSTM' or 'GRU'
         :param rnn_size: (int) number of units in one rnn layer
         :param num_layers: (int) number of rnn layers
@@ -64,12 +63,12 @@ class LSTM_RNN():
                                                                initial_state=self.initial_state, dtype=tf.float32)
         
     def outputs_layer(self):
-
         seq_output = self.rnn_outputs[:,-1,:] # We only want the output from the last iteration
         x = tf.reshape(seq_output, [-1, self.rnn_size])
         
         # define softmax layer variables:
         with tf.variable_scope('softmax'):
+            # Not sure why we use this normal distribution for initialization
             softmax_w = tf.Variable(tf.truncated_normal([self.rnn_size, self.num_classes], stddev=0.1))
             softmax_b = tf.Variable(tf.zeros(self.num_classes))
         
@@ -84,21 +83,29 @@ class LSTM_RNN():
         y_reshaped = tf.reshape(y_one_hot, self.logits.get_shape())
         
         # Softmax cross entropy loss
+        # Shoule we use logits as self.logits or self.prob_pred (after softmax) ?
         loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=y_reshaped)
-        self.loss = tf.reduce_mean(loss)     
+        self.loss = tf.reduce_mean(loss)
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
     def val_acc(self):
-        self.preds = tf.argmax(self.logits, axis=1, output_type=tf.int32)
+        # Calculate prediction as the maximum probability output from the output layer
+        self.preds = tf.argmax(self.prob_pred, axis=1, output_type=tf.int32)
+
+        # Test for equality of target and prediction. Validation accuracy is the
+        # mean of the resulting array, representing the proportion of correct preds
         correct_prediction = tf.equal(self.targets, self.preds)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
     def train(self, batches, X_val, y_val):
-            self.session = tf.Session()
-            with self.session as sess:
-                sess.run(tf.global_variables_initializer())
+            init = tf.global_variables_initializer()
+            with tf.Session() as sess:
+                sess.run(init)
                 counter = 0
+
+                # Initialize the states of the RNN
                 new_state = sess.run(self.initial_state)
+
                 # Train network
                 print("Initializing training")
                 for X_batch, y_batch in batches:
@@ -136,6 +143,22 @@ class LSTM_RNN():
                     '''
 
                 #self.saver.save(sess, "checkpoints/i{}_l{}.ckpt".format(counter, self.rnn_size))
+    def predict(self, X_test):
+        init = tf.global_variables_initializer()
+        with tf.Session() as sess:
+            sess.run(init)
+
+            # Need to save best training model above and load it here
+            new_state = sess.run(self.initial_state)
+
+            # Run predictions
+            print("Running network predictions")
+            feed = {self.inputs: X_test,
+                    #self.keep_prob: self.train_keep_prob,
+                    self.initial_state: new_state}
+            predictions = sess.run([self.preds], feed_dict=feed)
+
+        return predictions
 
     # Optimizer below is from HW3 - includes gradient clip
     '''
