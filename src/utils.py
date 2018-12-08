@@ -44,8 +44,7 @@ def shuffle(essays, scores, sets):
     # Create random mask and shuffle it
     num_essays = essays.shape[0]
     mask = np.arange(num_essays)
-    mask = np.random.shuffle(mask)
-
+    np.random.shuffle(mask)
     # Apply random mask to both essays and corresponding scores
     # Note: Shape differences between different network types
     if essays.ndim == 2:
@@ -54,11 +53,10 @@ def shuffle(essays, scores, sets):
         essays_shuffled = essays[mask,:,:]
     else:
         raise Exception('Input data shape unsupported.')
-
     scores_shuffled = scores[mask]
     sets_shuffled = sets[mask]
 
-    return essays_shuffled[0], scores_shuffled[0], sets_shuffled[0]
+    return essays_shuffled, scores_shuffled, sets_shuffled
 
 def train_val_split(essays, scores, sets, train_prop=0.8):
     '''
@@ -81,7 +79,7 @@ def train_val_split(essays, scores, sets, train_prop=0.8):
     y_val = scores[-num_val:]
     s_val = sets[-num_val:]
 
-    return X_train, y_train, s_train, X_val, y_val, s_train
+    return X_train, y_train, s_train, X_val, y_val, s_val
 
 def normalize_predictions(predictions, dataset):
     for i,pred in (enumerate(predictions)):
