@@ -8,8 +8,13 @@ class MLP(object):
                  l2_reg=1e-2, reg=False, use_bn=None, dropout_config=None):
         """
         Inputs:
+        :param input_dim: size of the input layer
+        :param hidden_dims: size of the hidden layers (as a list)
+        :param num_classes: number of output classes for classification
         :param weight_scale: (float) for layer weight initialization
         :param l2_reg: (float) L2 regularization
+        :param reg: boolean indicating whether regression is active. Otherwise
+                    classification.
         :param use_bn: (bool) decide whether to use batch normalization or not
         :param dropout_config: (dict) configuration for dropout
         """
@@ -45,55 +50,33 @@ class MLP(object):
             self.layers.append(tf.nn.relu(tf.matmul(self.layers[idx], self.W[idx+1]) + self.B[idx+1]))
         self.outputs = tf.matmul(self.layers[-1], self.W[-1]) + self.B[-1]
 
+        # Outputs for regression are single values. Outputs for classification
+        # are array of probabilities for each class
+        if self.reg:
+            self.outputs = tf.argmax(self.outputs, axis=1, output_type=tf.int32)
 
         self.loss()
         self.accuracy()
-        '''
-        self.W1 = tf.Variable(1e-2 * np.random.rand(self.input_dim, self.hidden_dims[0]).astype('float32'))
-        self.b1 = tf.Variable(np.zeros((self.hidden_dims[0],)).astype('float32'))
-        self.W2 = tf.Variable(1e-2 * np.random.rand(self.hidden_dims[0], self.hidden_dims[1]).astype('float32'))
-        self.b2 = tf.Variable(np.zeros((self.hidden_dims[1],)).astype('float32'))
-        self.W3 = tf.Variable(1e-2 * np.random.rand(self.hidden_dims[1], self.output_dim).astype('float32'))
-        self.b3 = tf.Variable(np.zeros((self.output_dim,)).astype('float32'))
-
-        h1_tf = tf.nn.relu(tf.matmul(self.X, self.W1) + self.b1)
-        h2_tf = tf.nn.relu(tf.matmul(h1_tf, self.W2) + self.b2)
-        h3_tf = tf.matmul(h2_tf, self.W3) + self.b3
-
-
-        if(num_classes == 1):
-            cost = tf.reduce_mean(tf.square(h3_tf-self.y))
-        else:
-            cost = tf.nn.softmax_cross_entropy_with_logits_v2(logits=h3_tf, labels=tf.one_hot(self.y, num_classes))
-        L2_loss = tf.nn.l2_loss(self.W1) + tf.nn.l2_loss(self.W2) + tf.nn.l2_loss(self.W3)
-        self.loss = tf.reduce_mean(cost) + l2_reg*L2_loss
-        
-        if(num_classes == 1):
-            self.preds = tf.round(h3_tf)
-        else:
-            self.preds = tf.argmax(h3_tf,1)
-        correct_prediction = tf.equal(self.y, self.preds)
-        self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-        self.saver = tf.train.Saver()
-        
-        '''
 
     def accuracy(self):
         if self.reg:
-            self.preds = tf.round(self.outputs)
+            self.preds = tf.cast(tf.round(self.outputs), tf.float32)
         else:
             self.preds = tf.argmax(self.outputs, axis=1, output_type=tf.int32)
 
+        # Check for equality of prediction and label. Save accuracy over batch
         correct_preds = tf.equal(self.y, self.preds)
         self.accuracy = tf.reduce_mean(tf.cast(correct_preds, tf.float32))
 
 
     def loss(self):
+        # Should this be sum of the squares rather than mean?
         if self.reg==True:
-            cost = tf.reduce_mean(tf.square(self.outputs-self.y))
+            cost = tf.reduce_mean(tf.square(tf.cast(self.outputs, tf.float32)-self.y))
         else:
             cost = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.outputs, labels=tf.one_hot(self.y, self.output_dim))
 
+        # Incorporate L2 regularization
         L2_loss = sum([tf.nn.l2_loss(w) for w in self.W])
         self.loss = tf.reduce_mean(cost) + self.l2_reg*L2_loss
 
