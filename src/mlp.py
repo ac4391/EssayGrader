@@ -65,7 +65,7 @@ class MLP(object):
             self.preds = tf.argmax(self.outputs, axis=1, output_type=tf.int32)
 
         # Check for equality of prediction and label. Save accuracy over batch
-        correct_preds = tf.equal(self.y, self.preds)
+        correct_preds = tf.equal(tf.cast(self.y, tf.int32), self.preds)
         self.accuracy = tf.reduce_mean(tf.cast(correct_preds, tf.float32))
 
 
@@ -97,7 +97,7 @@ class MLP(object):
             for batch_X, batch_y, batch_s in gen:
                 counter += 1
                 loss, _ = sess.run([self.loss,self.train_step], feed_dict={self.X: batch_X, self.y: batch_y})
-                if counter % 10 == 0:
+                if counter % 100 == 0:
                     preds, vals, val_acc = sess.run([self.preds, self.y, self.accuracy], feed_dict={self.X: X_val, self.y: y_val})
                     print("loss for counter {} is {}".format(counter, loss))
                     print('counter {}: valid acc = {}'.format(counter, val_acc))
