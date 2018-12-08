@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import re
+from math import *
 
 def get_data(data_file):
     # read data file into a pandas dataframe
@@ -158,3 +159,58 @@ def pad_embedding(essays_embed, max_length, right_pad=True):
                 essays_pad[idx] = np.vstack((pad_mat, mat))
 
     return essays_pad
+
+
+
+
+#Kappa
+def confusion_matrix(score1, score2):
+    assert(len(score1) == len(score2))
+    conf_mat = [[0 for i in range(13)]
+                for j in range(13)]
+    for a, b in zip(score1, score2):
+        conf_mat[a][b] += 1
+    return conf_mat
+
+
+def histogram(scores):
+    hist_scores = [0 for x in range(13)]
+    for r in scores:
+        hist_scores[r] += 1
+    return hist_scores
+
+
+def quadratic_weighted_kappa(score1, score2):
+    rater_a = np.array(score1, dtype=int)
+    rater_b = np.array(score2, dtype=int)
+    assert(len(score1) == len(score2))
+    conf_mat = confusion_matrix(score1, score2)
+    num_scores = len(conf_mat)
+    num_scored_items = float(len(score1))
+
+    hist_score1 = histogram(score1)
+    hist_score2 = histogram(score2)
+
+    numerator = 0.0
+    denominator = 0.0
+
+    for i in range(num_scores):
+        for j in range(num_scores):
+            expected_count = (hist_score1[i] * hist_score2[j]
+                              / num_scored_items)
+            d = pow(i - j, 2.0) / pow(num_scores - 1, 2.0)
+            numerator += d * conf_mat[i][j] / num_scored_items
+            denominator += d * expected_count / num_scored_items
+
+    return 1.0 - numerator / denominator
+
+#Pearson correlation
+
+def pearson_correlation(score1, score2):
+    x = score1 - score1.mean()
+    y = score2 - score2.mean()
+    return (x * y).sum() / np.sqrt((x**2).sum() * (y**2).sum())
+
+def Mean_squared_error(score1, score2):
+    mse = np.mean((score1-score2)**2)
+    return mse
