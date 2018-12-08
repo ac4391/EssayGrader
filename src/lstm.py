@@ -45,8 +45,8 @@ class RNN():
         
     def inputs_layer(self):
 
-        self.inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.embed_size), name='inputs')
-        self.targets = tf.placeholder(tf.int32, shape=(self.batch_size), name='targets')
+        self.inputs = tf.placeholder(tf.float32, shape=(None, self.seq_length, self.embed_size), name='inputs')
+        self.targets = tf.placeholder(tf.int32, shape=(None), name='targets')
         
     def rnn_layer(self):
         
@@ -108,7 +108,7 @@ class RNN():
 
                 # Train network
                 print("Initializing training")
-                for X_batch, y_batch in batches:
+                for X_batch, y_batch, _ in batches:
                     counter += 1
                     start = time.time()
                     feed = {self.inputs: X_batch,
@@ -123,7 +123,7 @@ class RNN():
                         print('step: {} '.format(counter),
                               'loss: {:.4f} '.format(batch_loss),
                               '{:.4f} sec/batch'.format((end-start)))
-                    if counter % 5 == 0:
+                    if counter % 10 == 0:
                         feed = {self.inputs: X_val,
                                 self.targets: y_val,
                                 self.initial_state: new_state}
