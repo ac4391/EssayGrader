@@ -28,7 +28,7 @@ def vectorize_essays(essays, embed_size, verbose=False):
     embed = load_word_embedding(embed_size=embed_size)
 
     num_essays = len(essays)
-    print("The total number of essays is {}".format(num_essays))
+    print("Vectorizing essays...")
     essay_vectorized = [None]*num_essays
 
     # Iterate through each essay and create the word embedding version
@@ -134,7 +134,7 @@ def load_word_embedding(embed_size):
 
     return embed_dict
 
-def pad_embedding(essays_embed, max_length, right_pad=True):
+def pad_embedding(essay_embed, set, wc_stats, right_pad=True):
     '''
     This function will take essays of variable length and standardize
     their length
@@ -142,6 +142,11 @@ def pad_embedding(essays_embed, max_length, right_pad=True):
     :param max_length: The desired word length for each essay
     :param right_pad: Allows for padding at the start or end of the essay
     :return: Array of padded word embedded essays
+    '''
+
+    # The commented code was originally used with a series of essays
+    # the working code pads one essay at a time. Leaving both here in case
+    # we want to switch back.
     '''
     num_essays = len(essays_embed)
     essays_pad = [None]*num_essays
@@ -157,8 +162,23 @@ def pad_embedding(essays_embed, max_length, right_pad=True):
                 essays_pad[idx] = np.vstack((mat, pad_mat))
             else:
                 essays_pad[idx] = np.vstack((pad_mat, mat))
+    '''
+    num_words, embed_size = essay_embed.shape
+    _, max_length = wc_stats[set]
+    pad_length = max_length - num_words
 
-    return essays_pad
+    if pad_length>0:
+        pad_mat = np.zeros(shape=[pad_length, embed_size], dtype='float32')
+
+        # Add padding to the beginning or the end of the essay
+        if right_pad==True:
+            essay_pad = np.vstack((essay_embed, pad_mat))
+        else:
+            essay_pad = np.vstack((pad_mat, essay_embed))
+    else:
+        essay_pad = essay_embed
+
+    return essay_pad
 
 
 
