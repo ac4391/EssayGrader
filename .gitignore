@@ -114,3 +114,6 @@ essay_df.pkl
 
 # PyCharm config file
 .idea/
+
+# Tensorflow Models
+model/
