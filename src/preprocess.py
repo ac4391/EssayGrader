@@ -201,8 +201,6 @@ def histogram(scores):
 
 
 def quadratic_weighted_kappa(score1, score2):
-    rater_a = np.array(score1, dtype=int)
-    rater_b = np.array(score2, dtype=int)
     assert(len(score1) == len(score2))
     conf_mat = confusion_matrix(score1, score2)
     num_scores = len(conf_mat)
