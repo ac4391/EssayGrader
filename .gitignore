@@ -109,8 +109,8 @@ venv.bak/
 # Pretrained GloVe word embeddings
 glove.6B/
 
-# Pkl file for pandasdataframe
-essay_df.pkl
+# Pkl files for pandas dataframes
+*.pkl
 
 # PyCharm config file
 .idea/
