@@ -1,6 +1,6 @@
 import numpy as np
 
-def get_batches(essays, scores, sets, batch_size, net_type='lstm'):
+def get_batches(essays, scores, batch_size, net_type='lstm'):
     '''
     Batch generator to be used for training network
     :param essays: Numpy ndarray of essays. If net_type is 'lstm', the essays
@@ -16,25 +16,26 @@ def get_batches(essays, scores, sets, batch_size, net_type='lstm'):
     n_batches = int(len(essays) / batch_size)
     if net_type=='lstm' or net_type=='gru':
         while True:
+            essays_shuf, scores_shuf = shuffle(essays, scores)
             for i in range(n_batches):
-                batch_X = essays[i * batch_size: (i + 1) * batch_size, :, :]
-                batch_y = scores[i * batch_size: (i + 1) * batch_size]
-                batch_s = sets[i * batch_size: (i + 1) * batch_size]
+                batch_X = essays_shuf[i * batch_size: (i + 1) * batch_size, :, :]
+                batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
 
-                yield (batch_X, batch_y, batch_s)
+                yield (batch_X, batch_y)
 
     elif net_type=='mlp':
         while True:
-            essays_shuf, scores_shuf, sets_shuf = shuffle(essays,scores, sets)
+            essays_shuf, scores_shuf = shuffle(essays, scores)
             for i in range(n_batches):
                 batch_X = essays_shuf[i * batch_size: (i + 1) * batch_size, :]
                 batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
-                batch_s = sets_shuf[i * batch_size: (i + 1) * batch_size]
-                yield (batch_X, batch_y, batch_s)
+
+                yield (batch_X, batch_y)
 
 
 
-def shuffle(essays, scores, sets):
+
+def shuffle(essays, scores):
     '''
     This function will shuffle a set of input essays and corresponding labels
     :param essays: Array of word embedded essays
@@ -54,11 +55,10 @@ def shuffle(essays, scores, sets):
     else:
         raise Exception('Input data shape unsupported.')
     scores_shuffled = scores[mask]
-    sets_shuffled = sets[mask]
 
-    return essays_shuffled, scores_shuffled, sets_shuffled
+    return essays_shuffled, scores_shuffled
 
-def train_val_split(essays, scores, sets, train_prop=0.8):
+def train_val_split(essays, scores, train_prop=0.8):
     '''
     This function splits input data and corresponding label values
     into training and validation sets according to a desired proportion
@@ -72,14 +72,17 @@ def train_val_split(essays, scores, sets, train_prop=0.8):
     num_val = int(num_essays - num_train)
     X_train = essays[:num_train, :]
     y_train = scores[:num_train]
-    print(sets)
-    s_train = sets[:num_train]
 
     X_val = essays[-num_val:, :]
     y_val = scores[-num_val:]
-    s_val = sets[-num_val:]
 
-    return X_train, y_train, s_train, X_val, y_val, s_val
+    return X_train, y_train, X_val, y_val
+
+def preds_to_scores(preds, min_score):
+    return np.array([pred+min_score for pred in preds])
+
+def scores_to_preds(scores, min_score):
+    return np.array([score-min_score for score in scores])
 
 def normalize_predictions(predictions, dataset):
     for i,pred in (enumerate(predictions)):
