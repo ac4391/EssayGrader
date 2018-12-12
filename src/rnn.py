@@ -54,8 +54,10 @@ class RNN():
             cell = LSTMCell(self.rnn_size)
         else:
             cell = GRUCell(self.rnn_size)
-            
+
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=self.train_keep_prob)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell], state_is_tuple=True)
+
         # Initial state
         self.initial_state = cell.zero_state(self.batch_size, dtype=tf.float32)
 
@@ -97,70 +99,62 @@ class RNN():
         correct_prediction = tf.equal(self.targets, self.preds)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def train(self, batches, X_val, y_val):
+    def train(self, gen, X_val, y_val, n_epochs, n_batches):
+
+            self.saver = tf.train.Saver()
             init = tf.global_variables_initializer()
             with tf.Session() as sess:
                 sess.run(init)
-                counter = 0
 
                 # Initialize the states of the RNN
                 new_state = sess.run(self.initial_state)
-
+                best_acc = 0.0
                 # Train network
                 print("Initializing training")
-                for X_batch, y_batch, _ in batches:
-                    counter += 1
-                    start = time.time()
-                    feed = {self.inputs: X_batch,
-                            self.targets: y_batch,
-                            #self.keep_prob: self.train_keep_prob,
-                            self.initial_state: new_state}
-                    batch_loss, _, new_state = sess.run([self.loss, self.optimizer,
-                                                         self.final_state],
-                                                         feed_dict=feed)
-                    end = time.time()
-                    if counter % 1 == 0:
-                        print('step: {} '.format(counter),
-                              'loss: {:.4f} '.format(batch_loss),
-                              '{:.4f} sec/batch'.format((end-start)))
-                    if counter % 10 == 0:
-                        feed = {self.inputs: X_val,
-                                self.targets: y_val,
+                for e in range(1, n_epochs + 1):
+                    for itr in range(1, n_batches + 1):
+                        batch_X, batch_y = next(gen)
+                        start = time.time()
+                        feed = {self.inputs: batch_X,
+                                self.targets: batch_y,
                                 self.initial_state: new_state}
-                        val_acc, preds, targs = sess.run([self.accuracy,self.preds, self.targets], feed_dict = feed)
-                        print('step: {} '.format(counter),
-                              'validation accuracy {} '.format(val_acc))
-                        print(preds)
-                        print(targs)
+                        batch_loss, _, new_state = sess.run([self.loss, self.optimizer,
+                                                             self.final_state],
+                                                             feed_dict=feed)
+                        end = time.time()
+                        if itr % 10 == 0:
+                            feed = {self.inputs: X_val,
+                                    self.targets: y_val,
+                                    self.initial_state: new_state}
+                            val_acc, preds, targs = sess.run([self.accuracy,self.preds, self.targets], feed_dict = feed)
+                            print('Epoch {}, step {}'.format(e, itr),
+                                  'loss: {:.4f} '.format(batch_loss),
+                                  'validation accuracy: {} '.format(val_acc),
+                                  '{:.4f} sec/batch'.format((end-start)))
 
-                    '''
-                    if (counter % save_every_n == 0):
-                        print("Model Saved")
-                        self.saver.save(sess, "checkpoints/i{}_l{}.ckpt".format(counter, self.rnn_size))
-                        
-                    if counter >= max_count:
-                        break
-                    '''
+                            if val_acc > best_acc:
+                                best_acc = val_acc
+                                print('Best validation accuracy! - Saving Model')
+                                self.saver.save(sess, 'model/best_model_rnn')
 
-                #self.saver.save(sess, "checkpoints/i{}_l{}.ckpt".format(counter, self.rnn_size))
-    def predict(self, X_test):
-        init = tf.global_variables_initializer()
+                            # Debug - remove later
+                            print(preds)
+                            print(targs)
+                print('Best validation accuracy over the training period was: {}%'.format(best_acc))
+
+    def predict(self, checkpoint, X_test):
         with tf.Session() as sess:
-            sess.run(init)
-
+            self.batch_size = X_test.shape[0]
+            self.saver.restore(sess, checkpoint)
             # Need to save best training model above and load it here
-            new_state = sess.run(self.initial_state)
-
             # Run predictions
             print("Running network predictions")
-            feed = {self.inputs: X_test,
-                    #self.keep_prob: self.train_keep_prob,
-                    self.initial_state: new_state}
+            feed = {self.inputs: X_test}
             predictions = sess.run([self.preds], feed_dict=feed)
 
         return predictions
 
-    # Optimizer below is from HW3 - includes gradient clip
+    # Optimizer below is from HW3 - includes gradient clip in case we want to try that
     '''
     def my_optimizer(self):
         
