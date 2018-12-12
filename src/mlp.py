@@ -1,11 +1,10 @@
 import tensorflow as tf
 import numpy as np
-from src.utils import normalize_predictions
 
 class MLP(object):
 
-    def __init__(self, input_dim=60000, hidden_dims=[200, 200], num_classes=12, weight_scale=1e-2,
-                 l2_reg=1e-2, reg=False, use_bn=None, dropout_config=None):
+    def __init__(self, input_dim=200, hidden_dims=[200, 200], num_classes=12, weight_scale=1e-2,
+                 l2_reg=1e-2, regression=False, use_bn=None, dropout_config=None):
         """
         Inputs:
         :param input_dim: size of the input layer
@@ -20,7 +19,7 @@ class MLP(object):
         """
         self.input_dim = input_dim
         self.hidden_dims = hidden_dims
-        self.reg = reg # Use regression if true, classification if false
+        self.reg = regression # Use regression if true, classification if false
 
         # Regression will have an output size of 1
         if self.reg:
@@ -34,7 +33,6 @@ class MLP(object):
             self.y = tf.placeholder(tf.float32, shape=(None,))
         else:
             self.y = tf.placeholder(tf.int32, shape=(None,))
-
 
         # Define input layer weights and biases
         self.W = [tf.Variable(weight_scale * np.random.rand(self.input_dim, self.hidden_dims[0]).astype('float32'))]
@@ -55,19 +53,15 @@ class MLP(object):
             self.layers.append(tf.nn.relu(tf.matmul(self.layers[idx], self.W[idx+1]) + self.B[idx+1]))
         self.outputs = tf.matmul(self.layers[-1], self.W[-1]) + self.B[-1]
 
-        '''
-        # Outputs for regression are single values. Outputs for classification
-        # are array of probabilities for each class
-        if self.reg:
-            self.outputs = tf.argmax(self.outputs, axis=1, output_type=tf.int32)
-        '''
         self.loss()
         self.accuracy()
 
     def accuracy(self):
+        # Prediction is different for regression and classification
         if self.reg:
             self.preds = self.outputs
         else:
+            # Prediction for classification is the class with the highest probability
             self.preds = tf.argmax(self.outputs, axis=1, output_type=tf.int32)
 
         # Check for equality of prediction and label. Save accuracy over batch
@@ -75,7 +69,6 @@ class MLP(object):
         self.accuracy = tf.reduce_mean(tf.cast(correct_preds, tf.float32))
 
     def loss(self):
-        # Should this be sum of the squares rather than mean?
         if self.reg==True:
             cost = tf.reduce_mean(tf.square(self.outputs-self.y))
         else:
@@ -86,57 +79,43 @@ class MLP(object):
         self.loss = tf.reduce_mean(cost) + self.l2_reg*L2_loss
 
     def optimizer_def(self, lr):
-        #self.optimizer = tf.train.AdamOptimizer(lr).minimize(self.loss)
-        self.optimizer = tf.train.AdamOptimizer(lr).minimize(self.loss)
+        self.optimizer = tf.train.AdamOptimizer(lr)
+        self.train_op = self.optimizer.minimize(self.loss)
 
-
-    def train(self, gen, X_val, y_val, s_val, n_iters, lr):
+    def train(self, gen, X_val, y_val, n_epochs, n_batches, lr):
         self.optimizer_def(lr)
-        self.train_step = self.optimizer
 
         best_acc = 0
-        lowest_loss = 10000
         init = tf.global_variables_initializer()
         with tf.Session() as sess:
             self.saver = tf.train.Saver()
             sess.run(init)
+            for e in range(1,n_epochs+1):
+                for itr in range(1,n_batches+1):
+                    batch_X, batch_y = next(gen)
+                    loss, _ = sess.run([self.loss,self.train_op], feed_dict={self.X:batch_X, self.y:batch_y})
 
-            itr = 0
-            for batch_X, batch_y, batch_s in gen:
-                itr += 1
-                loss, _ = sess.run([self.loss,self.train_step], feed_dict={self.X: batch_X, self.y: batch_y})
-                if loss<lowest_loss and itr%100 == 0:
-                    lowest_loss = loss
-                    print("Model Saved")
-                    self.saver.save(sess, 'model/best_model')
+                    if itr==1 and e%10==0:
+                        preds, vals, val_acc = sess.run([self.preds, self.y, self.accuracy],\
+                                                        feed_dict={self.X: X_val, self.y: y_val})
+                        print('Epoch {}, Batch {} -- Loss: {} Validation accuracy: {}'.format(e,itr,loss,val_acc))
 
-                if itr % 10 == 0:
-                    preds, vals, val_acc = sess.run([self.preds, self.y, self.accuracy], feed_dict={self.X: X_val, self.y: y_val})
-                    print("loss for counter {} is {}".format(itr, loss))
-                    print('counter {}: valid acc = {}'.format(itr, val_acc))
-                    #preds = normalize_predictions(preds, s_val)
-                    #vals = normalize_predictions(vals, s_val)
-                    print(preds[:20])
-                    print(vals[:20])
-                    if val_acc > best_acc:
-                        print('Best validation accuracy! iteration:{} accuracy: {}%'.format(itr, val_acc))
-                        best_acc = val_acc
-                        #self.saver.save(sess, 'model/best_model')
-                    if itr > n_iters:
-                        print("Best validation accuracy: {}".format(best_acc))
-                        break
-    
-    def predict(self, checkpoint, X_test, s_test):
+                        # Debug - remove later
+                        print(preds[:20])
+                        print(vals[:20])
+
+                        if val_acc > best_acc:
+                            best_acc = val_acc
+                            print('Best validation accuracy! - Saving Model')
+                            self.saver.save(sess, 'model/best_model_mlp')
+
+            print('Best validation accuracy over the training period was: {}%'.format(best_acc))
+
+    def predict(self, checkpoint, X_test):
         with tf.Session() as sess:
-
-            #predictions = tf.zeros(shape = X_test.shape)
+            # Restore a saved model and run prediction
             self.saver.restore(sess, checkpoint)
-            #for i, x in enumerate(X_test):
-                #preds = sess.run(self.preds, feed_dict={self.X: x})
-                #norm_pred = normalize_predictions(preds[0], s_test[i])
             preds = sess.run([self.preds], feed_dict={self.X: X_test})
 
-            #predictions = normalize_predictions(preds, s_test)
-
-        return preds
+        return preds[0]
     
