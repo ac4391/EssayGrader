@@ -56,6 +56,7 @@ class MLP(object):
             self.layers.append(curr_layer)
         self.outputs = tf.matmul(self.layers[-1], self.W[-1]) + self.B[-1]
 
+        self.saver = tf.train.Saver()
         self.loss()
         self.accuracy()
 
@@ -94,7 +95,7 @@ class MLP(object):
         train_loss_hist = {}
         val_loss_hist = {}
         with tf.Session() as sess:
-            self.saver = tf.train.Saver()
+
             sess.run(init)
             for e in range(1,n_epochs+1):
                 print('\n')
