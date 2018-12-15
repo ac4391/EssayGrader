@@ -2,24 +2,22 @@ from __future__ import print_function
 import tensorflow as tf
 from tensorflow.contrib.rnn import LSTMCell
 from tensorflow.contrib.rnn import GRUCell
-import numpy as np
 import time
-import os
 
 class RNN():
-    def __init__(self, num_classes, batch_size=64, seq_length=600, embed_size=100, cell_type='LSTM',
-                 rnn_size=128, num_layers=2, learning_rate=0.001, train_keep_prob=0.8, sampling=False):
+    def __init__(self, num_classes, batch_size=64, seq_length=600, embed_size=100, cell_type='lstm',
+                 rnn_size=128, learning_rate=0.001, train_keep_prob=0.8):
         '''
-        Initialize the input parameter to define the network
+        Initialize the input parameters and define the network
         inputs:
-        :param num_classes: (int) the vocabulary size of your input data
-        :param batch_size: (int) number of sequences in one batch
-        :param cell_type: your rnn cell type, 'LSTM' or 'GRU'
-        :param rnn_size: (int) number of units in one rnn layer
-        :param num_layers: (int) number of rnn layers
-        :param learning_rate: (float)
-        :param train_keep_prob: (float) dropout probability for rnn cell training
-        :param sampling: (boolean) whether train mode or sample mode
+        :param num_classes: the number of possible output scores
+        :param batch_size: number of essays in one batch
+        :param seq_length: number of inputs per sequence (words in each essay)
+        :param embed_size: length of the word embedding vector for each word
+        :param cell_type: your rnn cell type - 'lstm' or 'gru' are supported
+        :param rnn_size:  number of units in one rnn layer
+        :param learning_rate: learning rate for optimizer
+        :param train_keep_prob: dropout probability for rnn cell training
         '''
 
         tf.reset_default_graph()
@@ -30,7 +28,6 @@ class RNN():
         self.embed_size = embed_size
         self.cell_type = cell_type
         self.rnn_size = rnn_size
-        self.num_layers = num_layers
         self.learning_rate = learning_rate
         self.train_keep_prob = train_keep_prob
         
@@ -42,25 +39,27 @@ class RNN():
         self.saver = tf.train.Saver()
         
     def inputs_layer(self):
-
+        # Create placeholders for both inputs and targets
         self.inputs = tf.placeholder(tf.float32, shape=(None, self.seq_length, self.embed_size), name='inputs')
         self.targets = tf.placeholder(tf.int32, shape=(None), name='targets')
         
     def rnn_layer(self):
-        
-        if self.cell_type == 'LSTM':
+        # Define different cell depending on user choice of network type
+        if self.cell_type == 'lstm':
             cell = LSTMCell(self.rnn_size)
         else:
             cell = GRUCell(self.rnn_size)
 
         cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=self.train_keep_prob)
+
+        # Specify type of RNN cell
         cell = tf.nn.rnn_cell.MultiRNNCell([cell], state_is_tuple=True)
 
-        # Initial state
+        # Declare initial and output states of the RNN
         self.initial_state = cell.zero_state(self.batch_size, dtype=tf.float32)
-
         self.rnn_outputs, self.final_state = tf.nn.dynamic_rnn(cell, self.inputs,\
-                                                               initial_state=self.initial_state, dtype=tf.float32)
+                                                               initial_state=self.initial_state,\
+                                                               dtype=tf.float32)
         
     def outputs_layer(self):
         seq_output = self.rnn_outputs[:,-1,:] # We only want the output from the last iteration
@@ -68,11 +67,10 @@ class RNN():
         
         # define softmax layer variables:
         with tf.variable_scope('softmax'):
-            # Not sure why we use this normal distribution for initialization
             softmax_w = tf.Variable(tf.truncated_normal([self.rnn_size, self.num_classes], stddev=0.1))
             softmax_b = tf.Variable(tf.zeros(self.num_classes))
         
-        # calculate logits
+        # calculate logits of the network
         self.logits = tf.matmul(x, softmax_w) + softmax_b
         
         # softmax generate probability predictions
@@ -83,7 +81,6 @@ class RNN():
         y_reshaped = tf.reshape(y_one_hot, self.logits.get_shape())
         
         # Softmax cross entropy loss
-        # Shoule we use logits as self.logits or self.prob_pred (after softmax) ?
         loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.logits, labels=y_reshaped)
         self.loss = tf.reduce_mean(loss)
         self.optimizer = tf.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
@@ -110,7 +107,8 @@ class RNN():
                 train_loss_hist = {}
                 val_loss_hist = {}
 
-                # Train network
+                # Each epoch is one pass ver the training data
+                train_time_start = time.time()
                 for e in range(1, n_epochs + 1):
                     print('\n')
                     print('-'*10, 'Training epoch: {}'.format(e), '-'*10)
@@ -133,6 +131,7 @@ class RNN():
                                                                         self.initial_state: new_state})
                             val_loss_hist[(e,itr)] = val_loss
 
+                        # Test validation accuracy at certain intervals
                         if e%1==0 and itr%5==0:
                             feed = {self.inputs: X_val,
                                     self.targets: y_val,
@@ -154,6 +153,8 @@ class RNN():
                             print("Preds:  ", *preds[:20], sep=' ')
                             print("Actual: ", *targs[:20], sep=' ')
 
+                train_time_end = time.time()
+                print('\nTotal training time: {:0.3f}'.format(train_time_end-train_time_start))
                 print('Best validation accuracy over the training period was: {}%'.format(best_acc))
 
             return train_loss_hist, val_loss_hist
