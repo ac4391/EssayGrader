@@ -16,20 +16,20 @@ def get_batches(essays, scores, batch_size, net_type='lstm'):
     n_batches = int(len(essays) / batch_size)
     if net_type=='lstm' or net_type=='gru':
         while True:
+            # Shuffle essays after each full pass over the data
             essays_shuf, scores_shuf = shuffle(essays, scores)
             for i in range(n_batches):
                 batch_X = essays_shuf[i * batch_size: (i + 1) * batch_size, :, :]
                 batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
-
                 yield (batch_X, batch_y)
 
     elif net_type=='mlp':
         while True:
+            # Shuffle essays after each full pass over the data
             essays_shuf, scores_shuf = shuffle(essays, scores)
             for i in range(n_batches):
                 batch_X = essays_shuf[i * batch_size: (i + 1) * batch_size, :]
                 batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
-
                 yield (batch_X, batch_y)
 
 
@@ -46,6 +46,7 @@ def shuffle(essays, scores):
     num_essays = essays.shape[0]
     mask = np.arange(num_essays)
     np.random.shuffle(mask)
+
     # Apply random mask to both essays and corresponding scores
     # Note: Shape differences between different network types
     if essays.ndim == 2:
@@ -70,6 +71,7 @@ def train_val_split(essays, scores, train_prop=0.8):
     num_essays = essays.shape[0]
     num_train = int(np.ceil(num_essays*train_prop))
     num_val = int(num_essays - num_train)
+
     X_train = essays[:num_train, :]
     y_train = scores[:num_train]
 
@@ -79,12 +81,31 @@ def train_val_split(essays, scores, train_prop=0.8):
     return X_train, y_train, X_val, y_val
 
 def preds_to_scores(preds, min_score):
+    '''
+    This function shifts network predictions in a 0-based scale to a
+    desired scale
+    :param preds: array of predictions from the network
+    :param min_score: desired lowest value of the output scaled data
+    :return: Array of shifted scores
+    '''
     return np.array([pred+min_score for pred in preds])
 
 def scores_to_preds(scores, min_score):
+    '''
+    Corollary to preds_to_scores. Shifts score labels to 0-based
+    :param scores: array of essay scores
+    :param min_score: lowest score of input data scale
+    :return: Array of shifted scores
+    '''
     return np.array([score-min_score for score in scores])
 
 def normalize_predictions(predictions, dataset):
+    '''
+    Normalize scores from various essay sets to a single scale
+    :param predictions: Essay score predictions
+    :param dataset: Input dataset
+    :return: Normalized predictions
+    '''
     for i,pred in (enumerate(predictions)):
         if (dataset[i] == 1):
             continue
@@ -95,6 +116,51 @@ def normalize_predictions(predictions, dataset):
         else:
             predictions[i] = int(round(float(pred)/3))
     return predictions
+
+def confusion_matrix(score1, score2):
+    assert(len(score1) == len(score2))
+    conf_mat = [[0 for i in range(13)]
+                for j in range(13)]
+    for a, b in zip(score1, score2):
+        conf_mat[a][b] += 1
+    return conf_mat
+
+def histogram(scores):
+    hist_scores = [0 for x in range(13)]
+    for r in scores:
+        hist_scores[r] += 1
+    return hist_scores
+
+def quadratic_weighted_kappa(score1, score2):
+    assert(len(score1) == len(score2))
+    conf_mat = confusion_matrix(score1, score2)
+    num_scores = len(conf_mat)
+    num_scored_items = float(len(score1))
+
+    hist_score1 = histogram(score1)
+    hist_score2 = histogram(score2)
+
+    numerator = 0.0
+    denominator = 0.0
+
+    for i in range(num_scores):
+        for j in range(num_scores):
+            expected_count = (hist_score1[i] * hist_score2[j]
+                              / num_scored_items)
+            d = pow(i - j, 2.0) / pow(num_scores - 1, 2.0)
+            numerator += d * conf_mat[i][j] / num_scored_items
+            denominator += d * expected_count / num_scored_items
+
+    return 1.0 - numerator / denominator
+
+def pearson_correlation(score1, score2):
+    x = score1 - score1.mean()
+    y = score2 - score2.mean()
+    return (x * y).sum() / np.sqrt((x**2).sum() * (y**2).sum())
+
+def Mean_squared_error(score1, score2):
+    mse = np.mean((score1-score2)**2)
+    return mse
 
 # SCRAPPED, USE ONLY FOR REFERENCE
 def qwk(rater_a, rater_b, min_rating=None, max_rating=None):
