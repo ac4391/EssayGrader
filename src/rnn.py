@@ -8,7 +8,7 @@ import os
 
 class RNN():
     def __init__(self, num_classes, batch_size=64, seq_length=600, embed_size=100, cell_type='LSTM',
-                 rnn_size=128, num_layers=2, learning_rate=0.001, train_keep_prob=0.5, sampling=False):
+                 rnn_size=128, num_layers=2, learning_rate=0.001, train_keep_prob=0.8, sampling=False):
         '''
         Initialize the input parameter to define the network
         inputs:
@@ -113,7 +113,7 @@ class RNN():
                 # Train network
                 for e in range(1, n_epochs + 1):
                     print('\n')
-                    print('-'*10, 'Training epoch: {}'.format(e), '-'*10, end='')
+                    print('-'*10, 'Training epoch: {}'.format(e), '-'*10)
                     for itr in range(1, n_batches + 1):
                         batch_X, batch_y = next(gen)
                         start = time.time()

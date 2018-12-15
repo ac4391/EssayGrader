@@ -95,11 +95,10 @@ class MLP(object):
         train_loss_hist = {}
         val_loss_hist = {}
         with tf.Session() as sess:
-
             sess.run(init)
             for e in range(1,n_epochs+1):
                 print('\n')
-                print('-' * 10, 'Training epoch: {}'.format(e), '-' * 10, end='')
+                print('-' * 10, 'Training epoch: {}'.format(e), '-' * 10)
                 for itr in range(1,n_batches+1):
                     batch_X, batch_y = next(gen)
                     loss, _ = sess.run([self.loss,self.train_op], feed_dict={self.X:batch_X, self.y:batch_y})
