@@ -32,7 +32,6 @@ class RNN():
         self.rnn_size = rnn_size
         self.num_layers = num_layers
         self.learning_rate = learning_rate
-        #self.grad_clip = grad_clip
         self.train_keep_prob = train_keep_prob
         
         self.inputs_layer()
@@ -40,7 +39,6 @@ class RNN():
         self.outputs_layer()
         self.my_loss()
         self.val_acc()
-        #self.my_optimizer()
         self.saver = tf.train.Saver()
         
     def inputs_layer(self):
@@ -50,7 +48,7 @@ class RNN():
         
     def rnn_layer(self):
         
-        if (self.cell_type == 'LSTM'):
+        if self.cell_type == 'LSTM':
             cell = LSTMCell(self.rnn_size)
         else:
             cell = GRUCell(self.rnn_size)
@@ -99,7 +97,7 @@ class RNN():
         correct_prediction = tf.equal(self.targets, self.preds)
         self.accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-    def train(self, gen, X_val, y_val, n_epochs, n_batches):
+    def train(self, gen, X_val, y_val, n_epochs, n_batches, save_every_n, model_name):
 
             self.saver = tf.train.Saver()
             init = tf.global_variables_initializer()
@@ -109,9 +107,13 @@ class RNN():
                 # Initialize the states of the RNN
                 new_state = sess.run(self.initial_state)
                 best_acc = 0.0
+                train_loss_hist = {}
+                val_loss_hist = {}
+
                 # Train network
-                print("Initializing training")
                 for e in range(1, n_epochs + 1):
+                    print('\n')
+                    print('-'*10, 'Training epoch: {}'.format(e), '-'*10, end='')
                     for itr in range(1, n_batches + 1):
                         batch_X, batch_y = next(gen)
                         start = time.time()
@@ -122,7 +124,16 @@ class RNN():
                                                              self.final_state],
                                                              feed_dict=feed)
                         end = time.time()
-                        if itr % 10 == 0:
+
+                        # Save training and validation loss for plotting
+                        if itr%save_every_n == 0:
+                            train_loss_hist[(e,itr)] = batch_loss
+                            val_loss = sess.run([self.loss], feed_dict={self.inputs: X_val,
+                                                                        self.targets: y_val,
+                                                                        self.initial_state: new_state})
+                            val_loss_hist[(e,itr)] = val_loss
+
+                        if e%1==0 and itr%5==0:
                             feed = {self.inputs: X_val,
                                     self.targets: y_val,
                                     self.initial_state: new_state}
@@ -132,21 +143,26 @@ class RNN():
                                   'validation accuracy: {} '.format(val_acc),
                                   '{:.4f} sec/batch'.format((end-start)))
 
+                            # Early stopping: save best model
                             if val_acc > best_acc:
                                 best_acc = val_acc
                                 print('Best validation accuracy! - Saving Model')
-                                self.saver.save(sess, 'model/best_model_rnn')
+                                self.saver.save(sess, 'model/'+model_name)
 
-                            # Debug - remove later
-                            print(preds)
-                            print(targs)
+                            # Ouput a subset of predictions to the user
+                            print("Sample Grade Predictions: ")
+                            print("Preds:  ", *preds[:20], sep=' ')
+                            print("Actual: ", *targs[:20], sep=' ')
+
                 print('Best validation accuracy over the training period was: {}%'.format(best_acc))
+
+            return train_loss_hist, val_loss_hist
 
     def predict(self, checkpoint, X_test):
         with tf.Session() as sess:
-            self.batch_size = X_test.shape[0]
+            # Load training model from checkpoint for predictions
             self.saver.restore(sess, checkpoint)
-            # Need to save best training model above and load it here
+
             # Run predictions
             print("Running network predictions")
             feed = {self.inputs: X_test}
@@ -154,34 +170,3 @@ class RNN():
 
         return predictions
 
-    # Optimizer below is from HW3 - includes gradient clip in case we want to try that
-    '''
-    def my_optimizer(self):
-        
-        build our optimizer
-        Unlike previous worries of gradient vanishing problem,
-        for some structures of rnn cells, the calculation of hidden layers' weights 
-        may lead to an "exploding gradient" effect where the value keeps growing.
-        To mitigate this, we use the gradient clipping trick. Whenever the gradients are updated, 
-        they are "clipped" to some reasonable range (like -5 to 5) so they will never get out of this range.
-        parameters we will use:
-        self.loss, self.grad_clip, self.learning_rate
-        we have to define:
-        self.optimizer for later use
-        
-        # using clipping gradients
-        #######################################################
-        # TODO: implement your optimizer with gradient clipping
-        #######################################################
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-
-        # Gradient clipping - optimizer.minimize(loss) both calculates gradients and applies them
-        # Here, we would like to calculate, then manipulate, and then apply
-        
-        # https: // stackoverflow.com / questions / 36498127 / how - to - apply - gradient - clipping - in -tensorflow
-        gvs = optimizer.compute_gradients(self.loss)
-        #https: // github.com / jazzsaxmafia / Inpainting / issues / 6
-        capped_gvs = map(lambda gv: gv if gv[0] is None \
-                         else [tf.clip_by_value(gv[0], -self.grad_clip, self.grad_clip), gv[1]], gvs)
-        self.optimizer = optimizer.apply_gradients(capped_gvs) 
-    '''
