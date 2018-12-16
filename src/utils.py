@@ -35,9 +35,6 @@ def get_batches(essays, scores, batch_size, net_type='lstm'):
                 batch_y = scores_shuf[i * batch_size: (i + 1) * batch_size]
                 yield (batch_X, batch_y)
 
-
-
-
 def shuffle(essays, scores):
     '''
     This function will shuffle a set of input essays and corresponding labels
