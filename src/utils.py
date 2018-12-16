@@ -118,12 +118,6 @@ def normalize_predictions(predictions, dataset):
     return predictions
 
 
-
-
-
-
-
-
 def confusion_matrix(score1, score2, num_classes):
     '''
     Matrix mat of size num_classes x num_classes
@@ -178,14 +172,6 @@ def quadratic_weighted_kappa(score1, score2, num_classes):
             denominator += d * expected_count / num_scored_items
 
     return 1.0 - numerator / denominator
-
-
-
-
-
-
-
-
 
 
 def plot_train_loss(train_loss_hist, val_loss_hist, n_batches, model_name):
