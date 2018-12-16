@@ -117,7 +117,18 @@ def normalize_predictions(predictions, dataset):
             predictions[i] = int(round(float(pred)/3))
     return predictions
 
+
+
+
+
+
+
+
 def confusion_matrix(score1, score2, num_classes):
+    '''
+    Matrix mat of size num_classes x num_classes
+    mat[i][j] is the numbers of time rater1 gave i and rater2 gave j
+    '''
     assert(len(score1) == len(score2))
     conf_mat = [[0 for i in range(num_classes)]
                 for j in range(num_classes)]
@@ -126,12 +137,27 @@ def confusion_matrix(score1, score2, num_classes):
     return conf_mat
 
 def histogram(scores, num_classes):
+    '''
+    Distribution of the scores
+    :param scores: list of scores
+    :param num_classes: range of scores possible
+    :return: Distribution of the scores
+    '''
     hist_scores = [0 for x in range(num_classes)]
     for r in scores:
         hist_scores[r] += 1
     return hist_scores
 
 def quadratic_weighted_kappa(score1, score2, num_classes):
+    '''
+    Kappa Statistic mesure the degree of randomness (no correlation) between two range of scores
+    It evaluates how coherent are the scores of each rater (or with our prediction)
+    kappa=0 if random and 1 if the raters agree on the same score.
+    :param score1: first list of scores
+    :param score2: second list of scores
+    :param num_classes: range of scores possible
+    :return: performance metric quadratic weighted kappa
+    '''
     assert(len(score1) == len(score2))
     conf_mat = confusion_matrix(score1, score2, num_classes)
     num_scores = len(conf_mat)
@@ -153,14 +179,14 @@ def quadratic_weighted_kappa(score1, score2, num_classes):
 
     return 1.0 - numerator / denominator
 
-def pearson_correlation(score1, score2):
-    x = score1 - score1.mean()
-    y = score2 - score2.mean()
-    return (x * y).sum() / np.sqrt((x**2).sum() * (y**2).sum())
 
-def Mean_squared_error(score1, score2):
-    mse = np.mean((score1-score2)**2)
-    return mse
+
+
+
+
+
+
+
 
 def plot_train_loss(train_loss_hist, val_loss_hist, n_batches, model_name):
     '''
