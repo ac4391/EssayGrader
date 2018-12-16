@@ -1,4 +1,7 @@
 import numpy as np
+import plotly
+import plotly.graph_objs as go
+plotly.tools.set_credentials_file(username='ac4391', api_key='79W1QqBEtqlkdL2DNrqi')
 
 def get_batches(essays, scores, batch_size, net_type='lstm'):
     '''
@@ -161,3 +164,52 @@ def pearson_correlation(score1, score2):
 def Mean_squared_error(score1, score2):
     mse = np.mean((score1-score2)**2)
     return mse
+
+def plot_train_loss(train_loss_hist, val_loss_hist, n_batches, model_name):
+    '''
+    This function will plot the training and validation loss throughout the 
+    training process.
+    :param train_loss_hist: training loss history
+    :param val_loss_hist: validation loss history
+    :param n_batches: Number of batches per training epoch
+    :return: plotly figure
+    '''
+    # extract data from training and validation loss history
+    x = []
+    train_loss = []
+    val_loss = []
+    for k,v in train_loss_hist.items():
+        x.append(k[0]-1+k[1]/n_batches)
+        train_loss.append(v)
+        val_loss.append(val_loss_hist[k])
+        
+    # define plotly figure parameters 
+    Train_loss = go.Scatter(
+        x=x,
+        y=train_loss,
+        name='Training Loss')
+    Val_loss = go.Scatter(
+        x=x,
+        y=val_loss,
+        name='Validation Loss')
+    layout= go.Layout(
+        title= 'Training and Validation loss for model: {}'.format(model_name),
+        hovermode= 'closest',
+        xaxis= dict(
+            title= 'Epochs',
+            ticklen= 5,
+            zeroline= False,
+            gridwidth= 2,
+        ),
+        yaxis=dict(
+            title= 'Loss',
+            ticklen= 5,
+            gridwidth= 2,
+        ),
+        showlegend= True
+    )
+    data = [Train_loss, Val_loss]
+    fig= go.Figure(data=data, layout=layout)
+    return fig
+        
+    
