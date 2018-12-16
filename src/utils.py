@@ -1,7 +1,7 @@
 import numpy as np
 import plotly
 import plotly.graph_objs as go
-plotly.tools.set_credentials_file(username='ac4391', api_key='79W1QqBEtqlkdL2DNrqi')
+plotly.tools.set_credentials_file(username='pmt210', api_key='z98OIeWqz9ee8yG8tCN9')
 
 def get_batches(essays, scores, batch_size, net_type='lstm'):
     '''
