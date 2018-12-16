@@ -34,11 +34,12 @@ of this repository. With your new environment active, use the following command 
 pip install -r /path/to/req.txt
 ```
 
-### Installing
+### Getting Started
 
 Now that the necessary packages are installed, you can move to the 'preprocess.ipynb' jupyter notebook. This notebook
 takes the raw essay text (from the data file data/training_set_rel3.tsv) and completes necessary preprocessing to prepare
-the data for input to a neural network. 
+the data for input to a neural network. If you do not have this dataset, download it from the link 
+[(Here)](https://www.kaggle.com/c/asap-aes/data) 
 
 To run this notebook, you may run the following command:
 ```
@@ -46,38 +47,27 @@ jupyter notebook
 ```
 and navigate to the preprocess.ipynb file.
 
-After running the preprocess.ipynb notebook, a large data file 'essay_df.pkl' will be saved within the
+After running the preprocess.ipynb notebook, two large data files 'train_df.pkl' and 'test_df.pkl' will be saved within the
 'data/' directory on the user's local machine. This contains the preprocessed data to be loaded as input
 to the Neural Network models. 
 
 The next step is to run the main Jupyter notebook: 'EssayGrader.ipynb'. This notebook contains the main functionality
 for the project including running the various Neural Networks and interpreting the results. 
 
-
-Highest Quadratic Weighted Kappa Value: 74
-
-## Results
-
-![Kappa Scores](data/kappa_scores.png)
-
 When Running 'EssayGrader.ipynb' you will produce a model based on the desired parameters. This model is then used
 to create predictions based on a test set. The QWK values are calculated based on these predictions.
 
-### Break down into end to end tests
+
+## Results
 
 The QWK value measures the difference between the true grade of the essay and the predicted grade. 
-Value of 1 corresponds to a complete match, and a value of 0 corresponds to no improvement to random guessing
+A value of 1 corresponds to a complete match, and a value of 0 corresponds to no improvement over random guessing.
 
-```
-Give an example
-```
-### And coding style tests
+Using MLP, LSTM, and GRU network architectures, the best QWK score attained was 0.74. 
 
-Explain what these tests test and why
+![Kappa Scores](data/kappa_scores.png)
 
-```
-Give an example
-```
+
 
 ## Built With
 
