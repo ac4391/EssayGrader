@@ -115,6 +115,7 @@ def load_word_embedding(embed_size):
              represents a word. Each Value represents a vector of corresponding
              coefficients to a given word. 
     '''
+    print("Creating word embedding...")
     # Read in correct word embedding file
     if embed_size == 50:
         embed_file = './data/glove.6B/glove.6B.50d.txt'
