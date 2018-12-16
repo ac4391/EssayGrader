@@ -117,28 +117,28 @@ def normalize_predictions(predictions, dataset):
             predictions[i] = int(round(float(pred)/3))
     return predictions
 
-def confusion_matrix(score1, score2):
+def confusion_matrix(score1, score2, num_classes):
     assert(len(score1) == len(score2))
-    conf_mat = [[0 for i in range(13)]
-                for j in range(13)]
+    conf_mat = [[0 for i in range(num_classes)]
+                for j in range(num_classes)]
     for a, b in zip(score1, score2):
         conf_mat[a][b] += 1
     return conf_mat
 
-def histogram(scores):
-    hist_scores = [0 for x in range(13)]
+def histogram(scores, num_classes):
+    hist_scores = [0 for x in range(num_classes)]
     for r in scores:
         hist_scores[r] += 1
     return hist_scores
 
-def quadratic_weighted_kappa(score1, score2):
+def quadratic_weighted_kappa(score1, score2, num_classes):
     assert(len(score1) == len(score2))
-    conf_mat = confusion_matrix(score1, score2)
+    conf_mat = confusion_matrix(score1, score2, num_classes)
     num_scores = len(conf_mat)
     num_scored_items = float(len(score1))
 
-    hist_score1 = histogram(score1)
-    hist_score2 = histogram(score2)
+    hist_score1 = histogram(score1, num_classes)
+    hist_score2 = histogram(score2, num_classes)
 
     numerator = 0.0
     denominator = 0.0
@@ -161,50 +161,3 @@ def pearson_correlation(score1, score2):
 def Mean_squared_error(score1, score2):
     mse = np.mean((score1-score2)**2)
     return mse
-
-# SCRAPPED, USE ONLY FOR REFERENCE
-def qwk(rater_a, rater_b, min_rating=None, max_rating=None):
-    
-    rater_a = np.array(rater_a, dtype=int)
-    rater_b = np.array(rater_b, dtype=int)
-    if min_rating is None:
-        min_rating = min(min(rater_a), min(rater_b))
-    if max_rating is None:
-        max_rating = max(max(rater_a), max(rater_b))
-    conf_mat = confusion_matrix(rater_a, rater_b,
-                                min_rating, max_rating)
-    num_ratings = len(conf_mat)
-    num_scored_items = float(len(rater_a))
-
-    hist_rater_a = histogram(rater_a, min_rating, max_rating)
-    hist_rater_b = histogram(rater_b, min_rating, max_rating)
-
-    numerator = 0.0
-    denominator = 0.0
-
-    for i in range(num_ratings):
-        for j in range(num_ratings):
-            expected_count = (hist_rater_a[i] * hist_rater_b[j]
-                              / num_scored_items)
-            d = pow(i - j, 2.0) / pow(num_ratings - 1, 2.0)
-            numerator += d * conf_mat[i][j] / num_scored_items
-            denominator += d * expected_count / num_scored_items
-
-    return 1.0 - numerator / denominator
-
-# SCRAPPED, USE ONLY FOR REFERENCE
-def confusion_matrix(rater_a, rater_b, min_rating=None, max_rating=None):
-    """
-    Returns the confusion matrix between rater's ratings
-    """
-    assert(len(rater_a) == len(rater_b))
-    if min_rating is None:
-        min_rating = min(rater_a + rater_b)
-    if max_rating is None:
-        max_rating = max(rater_a + rater_b)
-    num_ratings = int(max_rating - min_rating + 1)
-    conf_mat = [[0 for i in range(num_ratings)]
-                for j in range(num_ratings)]
-    for a, b in zip(rater_a, rater_b):
-        conf_mat[a - min_rating][b - min_rating] += 1
-    return conf_mat
