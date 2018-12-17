@@ -115,5 +115,3 @@ glove.6B/
 # PyCharm config file
 .idea/
 
-# Tensorflow Models
-model/
