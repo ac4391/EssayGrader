@@ -51,23 +51,24 @@ After running the preprocess.ipynb notebook, a large data file 'essay_df.pkl' wi
 to the Neural Network models. 
 
 The next step is to run the main Jupyter notebook: 'EssayGrader.ipynb'. This notebook contains the main functionality
-for project including running the various Neural Networks and interpreting the results. 
+for the project including running the various Neural Networks and interpreting the results. 
 
 
-End with an example of getting some data out of the system or using it for a little demo
+Highest Quadratic Weighted Kappa Value: 74
 
 ## Running the tests
 
-Explain how to run the automated tests for this system
+When Running 'EssayGrader.ipynb' you will produce a model based on the desired parameters. This model is then used
+to create predictions based on a test set. The QWK values are calculated based on these predictions.
 
 ### Break down into end to end tests
 
-Explain what these tests test and why
+The QWK value measures the difference between the true grade of the essay and the predicted grade. 
+Value of 1 corresponds to a complete match, and a value of 0 corresponds to no improvement to random guessing
 
 ```
 Give an example
 ```
-
 ### And coding style tests
 
 Explain what these tests test and why
