@@ -58,7 +58,7 @@ Highest Quadratic Weighted Kappa Value: 74
 
 ## Results
 
-![Kappa Scores](/data/kappa_scores.png)
+![Kappa Scores](data/kappa_scores.png)
 
 When Running 'EssayGrader.ipynb' you will produce a model based on the desired parameters. This model is then used
 to create predictions based on a test set. The QWK values are calculated based on these predictions.
