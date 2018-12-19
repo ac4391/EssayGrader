@@ -34,7 +34,7 @@ of this repository. With your new environment active, use the following command 
 pip install -r /path/to/req.txt
 ```
 
-### Getting Started
+## Running the Notebooks
 
 Now that the necessary packages are installed, you can move to the 'preprocess.ipynb' jupyter notebook. This notebook
 takes the raw essay text (from the data file data/training_set_rel3.tsv) and completes necessary preprocessing to prepare
