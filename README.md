@@ -76,6 +76,8 @@ Using MLP, LSTM, and GRU network architectures, the best QWK score attained was 
 * [Pandas](https://pandas.pydata.org/) - Data preparation
 * [GloVe](https://nlp.stanford.edu/projects/glove/) - Word Embeddings for vector representations for words
 * [Seaborn](https://seaborn.pydata.org/) - Data visualization
+* [Sklearn](https://sklearn.pydata.org/) - Machine learning
+
 
 
 ## Authors
